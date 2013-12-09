@@ -1,4 +1,4 @@
 define([
-  './functional/login',
-  './functional/create_account'
+  './functional/signIn',
+  './functional/signUp'
 ], function () {});
