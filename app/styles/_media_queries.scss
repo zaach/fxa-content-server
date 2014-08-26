@@ -117,6 +117,16 @@ only screen and (orientation:landscape) and (min-width:481px) and (max-height:48
     }
   }
 
+  .avatar_change {
+    .avatar-options {
+      display: none;
+    }
+
+    .avatar-options.mobile {
+      display: block;
+    }
+  }
+
   @keyframes movein {
     0% {
       left: 0;

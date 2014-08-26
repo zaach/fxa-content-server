@@ -125,6 +125,10 @@ a.avatar-wrapper {
       }
     }
   }
+
+  .avatar-options.mobile {
+    display: none;
+  }
 }
 
 @import 'cropper';
