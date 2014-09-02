@@ -59,8 +59,6 @@ function (chai, jquery, RouterMock, CanvasMock, Cropper, View) {
           .then(function () {
             cropper = new Cropper({
               container: view.$('.cropper'),
-              verticalGutter: 0,
-              horizontalGutter: 40,
               displayLength: 240,
               exportLength: 480
             });
@@ -80,14 +78,12 @@ function (chai, jquery, RouterMock, CanvasMock, Cropper, View) {
         cropper.setImageSrc(pngSrc, 100, 100);
 
         assert.equal(cropper.yCenter, 120);
-        assert.equal(cropper.xCenter, 160);
+        assert.equal(cropper.xCenter, 200);
         assert.equal(cropper.isLandscape, false);
         assert.equal(cropper._originalWidth, 100);
         assert.equal(cropper._originalHeight, 100);
-        assert.equal(cropper._height, 240);
-        assert.equal(cropper._width, 240);
-        assert.equal(cropper.verticalGutter, 0);
-        assert.equal(cropper.horizontalGutter, 40);
+        assert.equal(cropper.elementHeight(), 240);
+        assert.equal(cropper.elementWidth(), 240);
       });
 
 
@@ -126,14 +122,6 @@ function (chai, jquery, RouterMock, CanvasMock, Cropper, View) {
         assert.equal(cropper.xCenter, 265);
       });
 
-      it('updates size', function () {
-        cropper.setImageSrc(pngSrc, 100, 50);
-
-        cropper.updateSize(300);
-        assert.equal(cropper._height, 300);
-        assert.equal(cropper._width, 600);
-      });
-
       it('gets bounded position', function () {
         cropper.setImageSrc(pngSrc, 100, 50);
 
@@ -155,8 +143,8 @@ function (chai, jquery, RouterMock, CanvasMock, Cropper, View) {
 
         cropper.resize(100);
         assert.equal(cropper.scale, 100);
-        assert.equal(cropper._width, 960);
-        assert.equal(cropper._height, 480);
+        assert.equal(cropper.elementWidth(), 960);
+        assert.equal(cropper.elementHeight(), 480);
       });
 
       it('calculates crop position of image larger than crop area', function () {

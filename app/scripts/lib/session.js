@@ -14,14 +14,14 @@ define([
   var NAMESPACE = '__fxa_session';
 
   // and should not be saved to sessionStorage
-  var DO_NOT_PERSIST = ['client_id', 'prefillPassword', 'prefillYear', 'error', 'service', 'cropImgWidth', 'cropImgHeight', 'cropImgSrc'];
+  var DO_NOT_PERSIST = ['client_id', 'prefillPassword', 'prefillYear', 'error', 'service'];
 
   // Don't clear service because the signup page needs that state
   //  even when user credentials are cleared.
-  var DO_NOT_CLEAR = ['client_id', 'context', 'service', 'config'];
+  var DO_NOT_CLEAR = ['client_id', 'context', 'service', 'config', 'cropImgWidth', 'cropImgHeight', 'cropImgSrc'];
 
   // these keys will be persisted to localStorage so that they live between browser sessions
-  var PERSIST_TO_LOCAL_STORAGE = ['email', 'sessionToken', 'sessionTokenContext', 'oauth'];
+  var PERSIST_TO_LOCAL_STORAGE = ['email', 'sessionToken', 'sessionTokenContext', 'oauth', 'cropImgWidth', 'cropImgHeight', 'cropImgSrc'];
 
   function Session() {
     this.load();

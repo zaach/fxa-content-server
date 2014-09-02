@@ -25,6 +25,7 @@ function (p, _, FormView, Template, Session, Cropper, AuthErrors) {
     initialize: function (options) {
       options = options || {};
 
+      console.log('session', Session);
       this.cropImgSrc = Session.cropImgSrc;
     },
 
@@ -48,26 +49,28 @@ function (p, _, FormView, Template, Session, Cropper, AuthErrors) {
     },
 
     afterVisible: function () {
+      var self = this;
+
       // Use pre-set dimensions if available
       var width = Session.cropImgWidth;
       var height = Session.cropImgHeight;
 
-      try {
-        this.cropper = new Cropper({
-          container: this.$('.cropper'),
-          src: this.cropImgSrc,
-          width: width,
-          height: height,
-          displayLength: 240,
-          exportLength: 600,
-          verticalGutter: 0,
-          horizontalGutter: 0
-        });
-      } catch (e) {
-        this.navigate('settings/avatar/change', {
-          error: AuthErrors.toMessage('UNUSABLE_IMAGE')
-        });
-      }
+      require(['draggable', 'touch-punch'], function () {
+        try {
+          self.cropper = new Cropper({
+            container: self.$('.cropper'),
+            src: self.cropImgSrc,
+            width: width,
+            height: height,
+            displayLength: 240,
+            exportLength: 600
+          });
+        } catch (e) {
+          self.navigate('settings/avatar/change', {
+            error: AuthErrors.toMessage('UNUSABLE_IMAGE')
+          });
+        }
+      });
     },
 
     submit: function () {

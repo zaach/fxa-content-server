@@ -9,7 +9,6 @@ define([
 function () {
   var DEFAULT_DISPLAY_LENGTH = 240;
   var DEFAULT_EXPORT_LENGTH = 480;
-  var DEFAULT_GUTTER = 40;
 
   /*
    * options: {
@@ -17,8 +16,6 @@ function () {
    *  src: The image source. Data URIs are okay.
    *  width: The image width. Required if src is set.
    *  height: The image height. Required if src is set.
-   *  horizontalGutter: The amount of space between the crop zone and the sides of the wrapper
-   *  verticalGutter: The amount of space between the crop zone and the top/bottom of the wrapper
    *  displayLength: The length of the crop square during cropping
    *  exportLength: The length of the final cropped image
    * }
@@ -31,12 +28,7 @@ function () {
     this.left = 0;
     this.yCenter = 0;
     this.xCenter = 0;
-    this.verticalGutter = typeof options.verticalGutter !== 'undefined' ?
-                            options.verticalGutter :
-                            DEFAULT_GUTTER;
-    this.horizontalGutter = typeof options.horizontalGutter !== 'undefined' ?
-                            options.horizontalGutter :
-                            DEFAULT_GUTTER;
+    this.rotation = 0;
 
     if (! options.container) {
       throw new Error('A container element is required');
@@ -59,11 +51,17 @@ function () {
     this.draggable = container.find('.drag-overlay');
     this.draggable.draggable({
       drag: function (e, ui) {
-        var pos = self.getBoundedPosition(self.top + ui.position.top, self.left + ui.position.left);
-        self.img.css(pos);
+        var pos = self.getBoundedPosition(
+          self.top + ui.position.top,
+          self.left + ui.position.left
+        );
+        self.img.css(self.elementPosition(pos));
       },
       stop: function (e, ui) {
-        var pos = self.img.position();
+        var pos = self.getBoundedPosition(
+          self.top + ui.position.top,
+          self.left + ui.position.left
+        );
         self.updatePosition(pos);
         ui.helper.css({ top: 0, left: 0 });
       }
@@ -77,8 +75,7 @@ function () {
 
     this.rotator = container.find('.rotate');
     this.rotator.on('click', function () {
-      var data = self.rotate(90);
-      self.setImageSrc(data, self._originalHeight, self._originalWidth);
+      self.rotate(self.rotation + 90);
     });
 
     container.find('.zoom-out').on('click', function () {
@@ -94,15 +91,16 @@ function () {
     // Cache some invariants
     this._wrapperHeight = this.wrapper.height();
     this._wrapperWidth = this.wrapper.width();
-
+    this._wrapperYCenter = this._wrapperHeight / 2;
+    this._wrapperXCenter = this._wrapperWidth / 2;
   };
 
   Cropper.prototype.updatePosition = function (pos) {
-    this.yCenter = pos.top + this._height / 2;
-    this.xCenter = pos.left + this._width / 2;
+      this.yCenter = pos.top + this.boundsHeight() / 2;
+      this.xCenter = pos.left + this.boundsWidth() / 2;
 
-    this.top = pos.top;
-    this.left = pos.left;
+      this.top = pos.top;
+      this.left = pos.left;
   };
 
   Cropper.prototype.setImageSrc = function (src, width, height) {
@@ -139,42 +137,91 @@ function () {
     this.resize(this.scale);
   };
 
+  Cropper.prototype._dimensionsSwapped = function () {
+    return this.rotation % 180 !== 0;
+  };
+
   Cropper.prototype.updateSize = function (length) {
-    if (this.isLandscape) {
-      this._height = length;
-      this._width = length * this._originalWidth / this._originalHeight;
-    } else {
-      this._width = length;
-      this._height = length * this._originalHeight / this._originalWidth;
+    this.img.height(this.elementHeight());
+    this.img.width(this.elementWidth());
+  };
+
+  Cropper.prototype._length = function () {
+    return this.displayLength * (1 + this.scale / 100);
+  };
+
+  // This will scale distances to distances
+  Cropper.prototype._exportScale = function () {
+    return (1 + this.scale / 100) * this.isLandscape ?
+                  this._originalHeight / this.displayLength :
+                  this._originalWidth / this.displayLength;
+  };
+
+  Cropper.prototype.elementWidth = function () {
+    var length = this._length();
+    return this.isLandscape ?
+              length * this._originalWidth / this._originalHeight :
+              length;
+  };
+
+  Cropper.prototype.elementHeight = function () {
+    var length = this._length();
+    return this.isLandscape ?
+              length :
+              length * this._originalHeight / this._originalWidth;
+  };
+
+  Cropper.prototype.boundsWidth = function () {
+    return this._dimensionsSwapped() ?
+              this.elementHeight() :
+              this.elementWidth();
+  };
+
+  Cropper.prototype.boundsHeight = function () {
+    return this._dimensionsSwapped() ?
+              this.elementWidth() :
+              this.elementHeight();
+  };
+
+  Cropper.prototype.exportLength = function () {
+    return this._dimensionsSwapped() ?
+              this.elementHeight() :
+              this.elementWidth();
+  };
+
+  Cropper.prototype.elementPosition = function (pos) {
+    if (this._dimensionsSwapped()) {
+      pos.top += this._originOffset.top - this._originOffset.left;
+      pos.left += this._originOffset.left - this._originOffset.top;
     }
-    this.img.height(this._height);
-    this.img.width(this._width);
+    return pos;
   };
 
   Cropper.prototype.getBoundedPosition = function (top, left) {
-    var w = this._width;
-    var h = this._height;
+    var w = this.boundsWidth();
+    var h = this.boundsHeight();
+
     var wh = this._wrapperHeight;
     var ww = this._wrapperWidth;
 
     // keep the left edge of the image within the crop zone
-    if (left > this.horizontalGutter) {
-      left = this.horizontalGutter;
+    if (left > 0) {
+      left = 0;
     }
 
     // keep the right edge of the image within the crop zone
-    if (left + w < ww - this.horizontalGutter) {
-      left =  ww - this.horizontalGutter - w;
+    if (left + w < ww) {
+      left =  ww - w;
     }
 
     // keep the top edge of the image within the crop zone
-    if (top > this.verticalGutter) {
-      top = this.verticalGutter;
+    if (top > 0) {
+      top = 0;
     }
 
     // keep the bottom edge of the image within the crop zone
-    if (top + h < wh - this.verticalGutter) {
-      top = wh - this.verticalGutter - h;
+    if (top + h < wh) {
+      top = wh - h;
     }
 
     return { top: top, left: left };
@@ -194,13 +241,58 @@ function () {
 
     this.updateSize(length);
 
-    var pos = this.getBoundedPosition(this.yCenter - this._height / 2, this.xCenter - this._width / 2);
+    var pos = this.getBoundedPosition(this.yCenter - this.boundsHeight() / 2, this.xCenter - this.boundsWidth() / 2);
+
+    if (this._dimensionsSwapped()) {
+      this._originOffset = {
+        top: this._wrapperYCenter - this.elementHeight() / 2,
+        left: this._wrapperXCenter - this.elementWidth() / 2
+      };
+    }
+
     this.updatePosition(pos);
-    this.img.css(pos);
+    this.img.css(this.elementPosition(pos));
   };
 
   // Return new image data for the image rotated by a number of degrees
   Cropper.prototype.rotate = function (degrees) {
+    if (degrees % 90) {
+      throw new Error('Rotation must be by 90 degree increments');
+    }
+    degrees = degrees % 360;
+    this.img.removeClass('rotate-to-' + this.rotation).addClass('rotate-to-' + degrees);
+    this.rotation = degrees;
+
+    // initialize the center to the middle of the wrapper
+    this.yCenter = this._wrapperYCenter;
+    this.xCenter = this._wrapperXCenter;
+
+    this.resize(this.scale);
+  };
+
+  // Get the scaled position of the crop square over the source image
+  Cropper.prototype.cropPosition = function () {
+    var scale = this.isLandscape ?
+                  this._originalHeight / this.displayLength :
+                  this._originalWidth / this.displayLength;
+    var oscale = 1 + this.scale / 100;
+    var sourceLength = this.displayLength / oscale * scale;
+
+    var left = (-this.left) / oscale * scale;
+    var top = (-this.top) / oscale * scale;
+
+    return {
+      left: left,
+      top: top,
+      length: sourceLength
+    };
+  };
+
+  Cropper.prototype._getRotatedImage = function () {
+    if (! this._dimensionsSwapped()) {
+      return this.img[0];
+    }
+
     var canvas = this.canvas;
     var context = canvas.getContext('2d');
 
@@ -212,32 +304,22 @@ function () {
     context.translate(canvas.width / 2, canvas.height / 2);
 
     // rotate the canvas to the specified degrees
-    context.rotate(degrees * Math.PI / 180);
+    context.rotate(this.rotation * Math.PI / 180);
 
     // draw the image
     // since the context is rotated, the image will be rotated also
-    context.drawImage(this.img[0], -this._originalWidth / 2, -this._originalHeight / 2);
+    context.drawImage(this.img[0], -canvas.height / 2, -canvas.width / 2);
 
-    return canvas.toDataURL('image/png');
-  };
+    var img = new Image();
+    img.src = canvas.toDataURL('image/png');
 
-  // Get the scaled position of the crop square over the source image
-  Cropper.prototype.cropPosition = function () {
-    var scale = this.isLandscape ?
-                  this._originalHeight / this.displayLength :
-                  this._originalWidth / this.displayLength;
-    var oscale = 1 + this.scale / 100;
-    var sourceLength = this.displayLength / oscale * scale;
-
-    return {
-      left: (-this.left + this.horizontalGutter) / oscale * scale,
-      top: (-this.top + this.verticalGutter) / oscale * scale,
-      length: sourceLength
-    };
+    return img;
   };
 
   // Get the final cropped image data
   Cropper.prototype.toDataURL = function (type, quality) {
+    var img = this._getRotatedImage();
+
     var context = this.canvas.getContext('2d');
     var sourcePos = this.cropPosition();
     var destLength = this.exportLength;
@@ -245,9 +327,8 @@ function () {
     this.canvas.width = destLength;
     this.canvas.height = destLength;
 
-
     context.drawImage(
-      this.img[0],
+      img,
       sourcePos.left,
       sourcePos.top,
       sourcePos.length,
